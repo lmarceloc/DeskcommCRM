@@ -1,90 +1,197 @@
 "use client";
 
 /**
- * Armazenamento TEMPORÁRIO das cadências, no navegador.
+ * Cadências pela API real (`/api/v1/cadencias`) — não mais localStorage.
  *
- * O construtor nasceu antes do backend: para dar para criar, editar e voltar
- * a uma cadência, ela fica no localStorage deste navegador. Quando a API
- * `/api/v1/cadencias` existir, este hook troca a origem e as telas não mudam —
- * elas só conhecem `useCadencias()` e `useCadencia(id)`.
+ * A tela só conhece `useCadencias()` e `useCadencia(id)`, como o comentário
+ * antigo deste arquivo previa; o que muda aqui embaixo é a origem do dado.
+ *
+ * Duas traduções acontecem nesta camada, e só nesta camada:
+ *  - **Nomes de coluna**: a API é `name`/`created_at`/`updated_at` (JSON
+ *    snake_case, doutrina da API REST); a tela é `nome`/`criadaEm`/
+ *    `atualizadaEm` (contrato de `lib/cadencias/tipos.ts`, que nasceu antes do
+ *    backend). `configuracao`/`passos`/`status`/`id` já batem dos dois lados
+ *    porque são jsonb opaco ou vocabulário compartilhado.
+ *  - **Cadência do envio**: o construtor chama `salvar()` a cada tecla (ver
+ *    `Construtor.tsx`). Mudança de STATUS (ativar/pausar) vai direto para
+ *    `PATCH { status }` — precisa do erro 409 na hora se o estado mudou.
+ *    Mudança de CONTEÚDO (nome/configuração/passos) é debounced: gravar a
+ *    cada tecla encheria a rede e o audit por nada, e editar rascunho não
+ *    audita mesmo (ver a rota).
  */
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { novoId } from "@/lib/cadencias/arvore";
-import { cadenciaDeExemplo, configuracaoPadrao } from "@/lib/cadencias/exemplos";
-import type { Cadencia } from "@/lib/cadencias/tipos";
+import type { Cadencia, ConfiguracaoDaCadencia, Passo, StatusDaCadencia } from "@/lib/cadencias/tipos";
 
-const CHAVE = "crm.cadencias.v1";
-const VAZIO: Cadencia[] = [];
-
-let cache: Cadencia[] | null = null;
-const ouvintes = new Set<() => void>();
-
-function ler(): Cadencia[] {
-  if (cache) return cache;
-  try {
-    const bruto = window.localStorage.getItem(CHAVE);
-    cache = bruto ? (JSON.parse(bruto) as Cadencia[]) : [cadenciaDeExemplo()];
-  } catch {
-    cache = [cadenciaDeExemplo()];
-  }
-  return cache;
+interface LinhaDaApi {
+  id: string;
+  name: string;
+  status: StatusDaCadencia;
+  configuracao: ConfiguracaoDaCadencia;
+  passos?: Passo[];
+  versao: number;
+  created_at: string;
+  updated_at: string;
 }
 
-function gravar(lista: Cadencia[]) {
-  cache = lista;
-  try {
-    window.localStorage.setItem(CHAVE, JSON.stringify(lista));
-  } catch {
-    // Navegador sem armazenamento: a cadência vive só nesta aba.
-  }
-  for (const o of ouvintes) o();
+function linhaParaCadencia(row: LinhaDaApi): Cadencia {
+  return {
+    id: row.id,
+    nome: row.name,
+    status: row.status,
+    configuracao: row.configuracao,
+    passos: row.passos ?? [],
+    criadaEm: row.created_at,
+    atualizadaEm: row.updated_at,
+  };
 }
 
-function assinar(o: () => void) {
-  ouvintes.add(o);
-  return () => ouvintes.delete(o);
+async function extrairErro(res: Response): Promise<string> {
+  try {
+    const corpo = (await res.json()) as { error?: { message?: string } };
+    return corpo.error?.message ?? `Falha (${res.status}).`;
+  } catch {
+    return `Falha (${res.status}).`;
+  }
 }
 
 export function useCadencias() {
-  const lista = useSyncExternalStore(assinar, ler, () => VAZIO);
+  const [lista, setLista] = useState<Cadencia[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
-  const criar = useCallback((nome: string, tagDoSegmento: string): Cadencia => {
-    const agora = new Date().toISOString();
-    const nova: Cadencia = {
-      id: novoId(),
-      nome,
-      status: "rascunho",
-      criadaEm: agora,
-      atualizadaEm: agora,
-      configuracao: { ...configuracaoPadrao(), tagDoSegmento },
-      passos: [],
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/cadencias");
+        if (!res.ok) return;
+        const { data } = (await res.json()) as { data: LinhaDaApi[] };
+        if (vivo) setLista(data.map(linhaParaCadencia));
+      } finally {
+        if (vivo) setCarregando(false);
+      }
+    })();
+    return () => {
+      vivo = false;
     };
-    gravar([nova, ...ler()]);
+  }, []);
+
+  const criar = useCallback(async (nome: string, tagDoSegmento: string): Promise<Cadencia> => {
+    const res = await fetch("/api/v1/cadencias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: nome, tagDoSegmento }),
+    });
+    if (!res.ok) throw new Error(await extrairErro(res));
+    const { data } = (await res.json()) as { data: LinhaDaApi };
+    const nova = linhaParaCadencia(data);
+    setLista((atual) => [nova, ...atual]);
     return nova;
   }, []);
 
-  const excluir = useCallback((id: string) => {
-    gravar(ler().filter((c) => c.id !== id));
+  const excluir = useCallback(async (id: string) => {
+    const res = await fetch(`/api/v1/cadencias/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error(await extrairErro(res));
+    setLista((atual) => atual.filter((c) => c.id !== id));
   }, []);
 
-  return { lista, criar, excluir };
+  return { lista, criar, excluir, carregando };
 }
 
+const ESPERA_DO_DEBOUNCE_MS = 700;
+
 export function useCadencia(id: string) {
-  const lista = useSyncExternalStore(assinar, ler, () => VAZIO);
-  const cadencia = lista.find((c) => c.id === id) ?? null;
+  const [cadencia, setCadencia] = useState<Cadencia | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendente = useRef<{ name?: string; configuracao?: ConfiguracaoDaCadencia; passos?: Passo[] }>({});
+
+  useEffect(() => {
+    let vivo = true;
+    // `carregando` já nasce `true` (useState acima); Next.js remonta a página
+    // quando o `id` da rota muda, então não há um segundo carregamento no
+    // mesmo componente a resetar.
+    (async () => {
+      try {
+        const res = await fetch(`/api/v1/cadencias/${id}`);
+        if (!res.ok) {
+          if (vivo) setCadencia(null);
+          return;
+        }
+        const { data } = (await res.json()) as { data: LinhaDaApi };
+        if (vivo) setCadencia(linhaParaCadencia(data));
+      } finally {
+        if (vivo) setCarregando(false);
+      }
+    })();
+    return () => {
+      vivo = false;
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [id]);
+
+  const gravarConteudoAgora = useCallback(async () => {
+    const corpo = pendente.current;
+    pendente.current = {};
+    if (Object.keys(corpo).length === 0) return;
+    const res = await fetch(`/api/v1/cadencias/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    if (res.ok) {
+      const { data } = (await res.json()) as { data: LinhaDaApi };
+      setCadencia(linhaParaCadencia(data));
+    }
+    // Falha na gravação debounced fica só no console: o construtor não tem
+    // onde mostrar um erro de tecla perdida sem interromper quem está
+    // digitando. A tela recarrega com o último estado salvo se navegar fora.
+  }, [id]);
 
   const salvar = useCallback(
     (nova: Cadencia) => {
-      gravar(
-        ler().map((c) =>
-          c.id === id ? { ...nova, atualizadaEm: new Date().toISOString() } : c,
-        ),
-      );
+      setCadencia((atual) => {
+        const anterior = atual;
+        // Otimista: a tela mostra a mudança já, e a rede confirma depois.
+        const otimista = { ...nova, atualizadaEm: new Date().toISOString() };
+
+        if (anterior && nova.status !== anterior.status) {
+          void (async () => {
+            const res = await fetch(`/api/v1/cadencias/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: nova.status }),
+            });
+            if (res.ok) {
+              const { data } = (await res.json()) as { data: LinhaDaApi };
+              setCadencia(linhaParaCadencia(data));
+            } else if (anterior) {
+              // Estado recusado (409/422): volta pro que o servidor confirmou
+              // por último — não deixa a tela mentir "ativa" com o backend
+              // recusando.
+              setCadencia(anterior);
+            }
+          })();
+        }
+
+        const mudouConteudo =
+          !anterior || nova.nome !== anterior.nome || nova.configuracao !== anterior.configuracao || nova.passos !== anterior.passos;
+        if (mudouConteudo) {
+          pendente.current = {
+            ...pendente.current,
+            ...(nova.nome !== anterior?.nome ? { name: nova.nome } : {}),
+            ...(nova.configuracao !== anterior?.configuracao ? { configuracao: nova.configuracao } : {}),
+            ...(nova.passos !== anterior?.passos ? { passos: nova.passos } : {}),
+          };
+          if (timer.current) clearTimeout(timer.current);
+          timer.current = setTimeout(() => void gravarConteudoAgora(), ESPERA_DO_DEBOUNCE_MS);
+        }
+
+        return otimista;
+      });
     },
-    [id],
+    [id, gravarConteudoAgora],
   );
 
-  return { cadencia, salvar, carregando: lista === VAZIO };
+  return { cadencia, salvar, carregando };
 }

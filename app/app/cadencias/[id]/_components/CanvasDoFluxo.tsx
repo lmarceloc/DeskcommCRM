@@ -30,7 +30,6 @@ import { cn } from "@/lib/utils";
 import { ORDEM_DOS_TIPOS, VISUAL_DO_PASSO, resumirPasso } from "../../_components/visuais";
 
 interface Props {
-  passos: Passo[];
   configuracao: ConfiguracaoDaCadencia;
   numeros: Map<string, number>;
   erros: Map<string, string[]>;
@@ -51,7 +50,7 @@ const ZOOMS = [0.5, 0.75, 0.9, 1, 1.1, 1.25];
  * duas colunas. É HTML e CSS puros — não precisa de canvas livre com setas,
  * porque numa árvore a posição de cada card já é decidida pela ordem.
  */
-export function CanvasDoFluxo(props: Props) {
+export function CanvasDoFluxo({ passos, ...props }: Props & { passos: Passo[] }) {
   const t = useT();
   const [zoomIdx, setZoomIdx] = useState(3);
   const zoom = ZOOMS[zoomIdx] ?? 1;
@@ -102,10 +101,10 @@ export function CanvasDoFluxo(props: Props) {
             configuracao={props.configuracao}
             onClick={props.onAbrirConfiguracoes}
           />
-          <ListaDePassos lista="raiz" passos={props.passos} {...props} />
+          <ListaDePassos lista="raiz" passos={passos} {...props} />
           {/* Terminando num ramo, cada lado já mostra o próprio fim: um terceiro
               "fim" solto embaixo das duas colunas não pertenceria a caminho nenhum. */}
-          {props.passos.at(-1)?.tipo !== "ramo" && (
+          {passos.at(-1)?.tipo !== "ramo" && (
             <CartaoDoFim configuracao={props.configuracao} onClick={props.onAbrirConfiguracoes} />
           )}
         </div>

@@ -59,7 +59,7 @@ export function Construtor({ id }: { id: string }) {
   if (!cadencia) {
     return (
       <Card className="m-6 p-8 text-center">
-        <p className="text-sm text-text-muted">{t("Cadência não encontrada neste navegador.")}</p>
+        <p className="text-sm text-text-muted">{t("Cadência não encontrada.")}</p>
         <Button asChild variant="outline" className="mt-3">
           <Link href="/app/cadencias">{t("Voltar às cadências")}</Link>
         </Button>

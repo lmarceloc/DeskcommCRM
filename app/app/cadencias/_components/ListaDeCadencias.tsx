@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCadencias } from "@/hooks/cadencias/useCadencias";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
@@ -49,7 +51,7 @@ export function ListaDeCadencias() {
   const t = useT();
   const idioma = useTagDeIdioma();
   const router = useRouter();
-  const { lista, criar, excluir } = useCadencias();
+  const { lista, criar, excluir, carregando } = useCadencias();
   const [novaAberta, setNovaAberta] = useState(false);
   const [paraExcluir, setParaExcluir] = useState<Cadencia | null>(null);
 
@@ -70,11 +72,13 @@ export function ListaDeCadencias() {
       <div className="flex gap-2 rounded-md border border-info/30 bg-info-bg p-3 text-xs text-info-fg">
         <Info size={14} aria-hidden className="mt-0.5 shrink-0" />
         <span>
-          {t("Versão de desenho: as cadências ficam salvas só neste navegador e nenhum e-mail é enviado ainda.")}
+          {t("A cadência já fica salva no CRM. O envio de e-mail ainda não está ligado — os leads inscritos esperam na fila.")}
         </span>
       </div>
 
-      {lista.length === 0 ? (
+      {carregando ? (
+        <Skeleton className="h-40" />
+      ) : lista.length === 0 ? (
         <Card className="flex flex-col items-center gap-2 p-10 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
             <EnvelopeSimple size={24} aria-hidden />
@@ -148,9 +152,13 @@ export function ListaDeCadencias() {
       <NovaCadenciaDialog
         aberto={novaAberta}
         onFechar={() => setNovaAberta(false)}
-        onCriar={(nome, tag) => {
-          const nova = criar(nome, tag);
-          router.push(`/app/cadencias/${nova.id}`);
+        onCriar={async (nome, tag) => {
+          try {
+            const nova = await criar(nome, tag);
+            router.push(`/app/cadencias/${nova.id}`);
+          } catch (erro) {
+            toast.error(erro instanceof Error ? erro.message : t("Não foi possível criar a cadência."));
+          }
         }}
       />
 
@@ -163,8 +171,14 @@ export function ListaDeCadencias() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("Cancelar")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (paraExcluir) excluir(paraExcluir.id);
+              onClick={async () => {
+                if (paraExcluir) {
+                  try {
+                    await excluir(paraExcluir.id);
+                  } catch (erro) {
+                    toast.error(erro instanceof Error ? erro.message : t("Não foi possível excluir a cadência."));
+                  }
+                }
                 setParaExcluir(null);
               }}
             >
