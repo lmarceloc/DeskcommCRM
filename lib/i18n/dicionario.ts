@@ -12590,6 +12590,8 @@ export const DICIONARIO: Traducoes = {
   "Variável que não existe:": { es: "Variable que no existe:" },
   "Verificar se o lead...": { es: "Verificar si el lead..." },
   "A cadência já fica salva no CRM. O envio de e-mail ainda não está ligado — os leads inscritos esperam na fila.": { es: "La cadencia ya queda guardada en el CRM. El envío de correo todavía no está activado — los leads inscritos esperan en la cola." },
+  "Não foi possível criar a cadência.": { es: "No se pudo crear la cadencia." },
+  "Não foi possível excluir a cadência.": { es: "No se pudo eliminar la cadencia." },
   "Voltar às cadências": { es: "Volver a las cadencias" },
   "dia útil": { es: "día hábil" },
   "dias úteis": { es: "días hábiles" },
