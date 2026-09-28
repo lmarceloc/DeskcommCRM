@@ -130,6 +130,8 @@ export const AUDIT_ACTIONS = [
   "contact.field_confirmed",
   "contact.field_rejected",
   "lead.tags_changed",
+  "lead.attachment_added",
+  "lead.attachment_removed",
   "message.sent",
   "message.received",
   "message.edited",

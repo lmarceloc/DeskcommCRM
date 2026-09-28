@@ -40157,3 +40157,84 @@ alter table public.email_cadence_events
     'descadastrou','ramo_sim','ramo_nao','tarefa_criada','parada','concluida',
     'limite_diario_atingido'
   ));
+
+-- ---- anexos do negócio (migration 0432) ----
+-- Arquivo anexado a um Deal (proposta, contrato, orçamento), com link público
+-- permanente em GET /api/v1/anexos/{id}. Tabela nova (metadado por arquivo:
+-- nome original, tipo, tamanho, quem subiu) e não array de caminhos como a
+-- 0390 (fotos do produto) — motivo completo no cabeçalho da migration.
+-- ⚠️ Migration renumerada de 0429 para 0432 no merge: 0429 já estava tomado
+-- por outra PR mesclada primeiro (cadencia_registrar_abertura).
+create table if not exists public.crm_lead_attachments (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  lead_id uuid not null references public.crm_leads(id) on delete cascade,
+  storage_path text not null,
+  file_name text not null,
+  mime_type text not null,
+  size_bytes integer not null,
+  uploaded_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  constraint crm_lead_attachments_file_name_nao_vazio check (btrim(file_name) <> ''),
+  constraint crm_lead_attachments_tamanho_positivo check (size_bytes > 0),
+  constraint crm_lead_attachments_tipo_check check (mime_type in (
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ))
+);
+
+create index if not exists idx_crm_lead_attachments_negocio
+  on public.crm_lead_attachments (lead_id, created_at desc);
+create index if not exists idx_crm_lead_attachments_org
+  on public.crm_lead_attachments (organization_id, created_at desc);
+
+comment on table public.crm_lead_attachments is
+  'Arquivo anexado a um negócio (proposta, contrato, orçamento). Caminho em storage/deal-attachments. Link público permanente em GET /api/v1/anexos/{id}.';
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'deal-attachments', 'deal-attachments', false, 20971520,
+  array[
+    'application/pdf', 'image/jpeg', 'image/png',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+)
+on conflict (id) do update
+  set public             = excluded.public,
+      file_size_limit    = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+alter table public.crm_lead_attachments enable row level security;
+
+drop policy if exists "crm_lead_attachments_select" on public.crm_lead_attachments;
+drop policy if exists "crm_lead_attachments_insert" on public.crm_lead_attachments;
+drop policy if exists "crm_lead_attachments_delete" on public.crm_lead_attachments;
+
+create policy "crm_lead_attachments_select" on public.crm_lead_attachments
+  for select using (
+    exists (
+      select 1 from public.crm_leads l
+      where l.id = crm_lead_attachments.lead_id
+        and public.fn_can_view_lead(l.organization_id, l.owner_user_id)
+    )
+  );
+
+create policy "crm_lead_attachments_insert" on public.crm_lead_attachments
+  for insert with check (
+    (organization_id in (select public.fn_user_org_ids()))
+    or public.fn_is_platform_admin()
+  );
+
+create policy "crm_lead_attachments_delete" on public.crm_lead_attachments
+  for delete using (
+    (organization_id in (select public.fn_user_org_ids()))
+    or public.fn_is_platform_admin()
+  );
+
+revoke all on public.crm_lead_attachments from anon, authenticated;
+grant select, insert, delete on public.crm_lead_attachments to authenticated;
+grant all on public.crm_lead_attachments to service_role;

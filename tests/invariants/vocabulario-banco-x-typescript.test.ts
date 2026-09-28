@@ -54,6 +54,7 @@ const PARES: Array<{
   { tabela: "email_cadence_enrollments", coluna: "origem", arquivo: "lib/cadencias/vocabulario.ts", simbolo: "ORIGENS_DA_INSCRICAO" },
   { tabela: "email_cadence_enrollments", coluna: "motivo_parada", arquivo: "lib/cadencias/vocabulario.ts", simbolo: "MOTIVOS_DE_PARADA" },
   { tabela: "email_cadence_events", coluna: "tipo", arquivo: "lib/cadencias/vocabulario.ts", simbolo: "TIPOS_DE_EVENTO_DA_CADENCIA" },
+  { tabela: "crm_lead_attachments", coluna: "mime_type", arquivo: "lib/anexos/tipos.ts", simbolo: "TIPOS_DE_ANEXO_ACEITOS" },
   {
     tabela: "ad_platform_connections",
     coluna: "google_api",

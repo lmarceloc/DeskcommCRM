@@ -7,6 +7,7 @@ import { useT } from "@/hooks/i18n/useT";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useLeadTimeline } from "@/hooks/leads/useLeadTimeline";
 import type { Lead } from "@/lib/types/leads";
+import { AnexosDoNegocio } from "./AnexosDoNegocio";
 import { AnotacoesDoNegocio } from "./AnotacoesDoNegocio";
 import { ContatoDoNegocio } from "./ContatoDoNegocio";
 import { ConversaNoDossie } from "./ConversaNoDossie";
@@ -150,6 +151,16 @@ export function LeadDossier({
             {t("Outros contatos")}
           </h3>
           <OutrosContatosDoNegocio leadId={lead.id} />
+        </section>
+
+        {/* Proposta, contrato, orçamento — PDF/JPEG/PNG/Word. O que se manda
+            pro cliente é o LINK permanente (botão "Copiar link"), nunca o
+            arquivo pelo WhatsApp. */}
+        <section className="border-b border-border py-3">
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+            {t("Anexos")}
+          </h3>
+          <AnexosDoNegocio leadId={lead.id} />
         </section>
 
         {/* Anotação manual, com @menção visual — antes da timeline automática. */}

@@ -32,6 +32,12 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/api\/v1\/health$/,
   /^\/api\/v1\/webhooks\//,
   /^\/api\/v1\/cron\//,
+  // O link permanente de um anexo do negócio (proposta, contrato, orçamento).
+  // Quem abre é o CLIENTE que recebeu o link — sem conta, sem cookie de
+  // sessão. A autorização mora DENTRO da rota: o `id` (uuid v4) é a
+  // capacidade, igual ao caminho de `catalog-photos`. Âncora `[^/]+$`: um
+  // sub-path futuro sob `/anexos/` não nasce público de carona.
+  /^\/api\/v1\/anexos\/[^/]+$/,
   // Landing page de captura de clique do Google Ads (migration 0306). Quem
   // chega aqui é o NAVEGADOR de quem clicou no anúncio — nunca tem, e não
   // pode ter, cookie de sessão nossa. Sem esta linha o proxy devolve 401
