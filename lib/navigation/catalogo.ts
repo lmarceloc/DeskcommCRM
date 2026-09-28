@@ -249,6 +249,18 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Empresa do negócio B2B (migration 0430). Só no hub, mesmo motivo de
+    // Cadências/Campanhas: é consultada de vez em quando (o vínculo do dia a
+    // dia é feito no dossiê do negócio), e o sidebar já está no limite medido
+    // pelo e2e de navegação (900px sem scroll).
+    href: "/app/companies",
+    label: "Empresas",
+    description: "As empresas dos seus negócios B2B.",
+    icon: "Buildings",
+    group: "crm",
+    section: "O dia a dia da venda",
+  },
+  {
     // Extraída do PR #418 (@clinicacentrodosorrisosc-code). Fica no CRM e no
     // sidebar porque é tela de USO DIÁRIO — quem atende abre para ver o que
     // vence hoje, do mesmo jeito que abre o Inbox. Sem `minRole`: `viewer` VÊ

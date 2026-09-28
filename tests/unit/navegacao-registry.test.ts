@@ -180,6 +180,8 @@ describe("hubSections", () => {
       // Quem abriu o mesmo e-mail de uma cadência 3x+ — trabalhado no dia a dia.
       "/app/hot-leads",
       "/app/contacts",
+      // Empresa do negócio B2B: consultada de vez em quando, como Cadências.
+      "/app/companies",
       "/app/tasks",
       "/app/calls",
       "/app/comandas",

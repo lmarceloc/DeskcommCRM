@@ -15,6 +15,13 @@ export type LeadStatus = "open" | "won" | "lost";
 export type OwnerKind = "user" | "ai" | null;
 
 /**
+ * 0430 — temperatura de interesse do negócio, SEPARADA da etapa do funil: a
+ * etapa é onde o processo está ("proposta enviada"), o termômetro é o quanto a
+ * pessoa parece querer comprar ("morno"). `null` = ainda não calibrado.
+ */
+export type Thermometer = "sem_interesse" | "frio" | "morno" | "quente" | "quase_fechando" | null;
+
+/**
  * Identidade do agente dono, resolvida no servidor e anexada ao lead pela rota
  * do board. **Não é coluna** de `crm_leads`.
  *
@@ -45,6 +52,12 @@ export interface Lead {
   value_cents: number | null;
   currency: string | null;
   owner_user_id: string | null;
+  /** 0430: empresa do negócio B2B. */
+  company_id: string | null;
+  /** 0430: temperatura de interesse, separada da etapa do funil. */
+  thermometer: Thermometer;
+  /** 0430: produto do catálogo (`catalog_products`) vendido neste negócio. */
+  product_id: string | null;
   /** 0070: quem é dono do negócio — humano, agente de IA, ou ninguém. */
   owner_kind: OwnerKind;
   /** 0070: identidade do agente dono (ai_agents.id), nunca a versão. */

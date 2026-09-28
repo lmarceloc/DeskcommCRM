@@ -68,6 +68,8 @@ const CONTATO = {
   phone_number: null,
   cpf_hash: null,
   birthdate: null,
+  linkedin_url: null,
+  job_title: null,
   is_blocked: false,
   blocked_reason: null,
   is_anonymized: false,
