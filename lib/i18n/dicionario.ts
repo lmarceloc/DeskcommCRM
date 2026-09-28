@@ -8699,6 +8699,18 @@ export const DICIONARIO: Traducoes = {
   "Erro ao remover itens antigos.": { es: "Error al eliminar ítems antiguos." },
   "Erro ao remover router.": { es: "Error al eliminar el enrutador." },
   "Erro ao subir a imagem.": { es: "Error al subir la imagen." },
+  // ─── Anexos do negócio (Deal) ───
+  "Anexos": { es: "Adjuntos" },
+  "Anexar arquivo": { es: "Adjuntar archivo" },
+  "Anexo não encontrado.": { es: "Adjunto no encontrado." },
+  "Apagar anexo": { es: "Eliminar adjunto" },
+  "Nenhum anexo ainda.": { es: "Aún no hay adjuntos." },
+  "Não foi possível copiar o link.": { es: "No se pudo copiar el enlace." },
+  "O arquivo precisa ter até 20 MB.": { es: "El archivo debe tener hasta 20 MB." },
+  "O arquivo precisa ser PDF, JPEG, PNG ou Word (.doc/.docx).": {
+    es: "El archivo debe ser PDF, JPEG, PNG o Word (.doc/.docx).",
+  },
+  "Erro ao salvar o anexo.": { es: "Error al guardar el adjunto." },
   "Erro ao subir o arquivo.": { es: "Error al subir el archivo." },
   "Erro ao subir o logo.": { es: "Error al subir el logo." },
   "Erro ao validar agent_id.": { es: "Error al validar agent_id." },
