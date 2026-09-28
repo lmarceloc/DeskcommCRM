@@ -39,5 +39,6 @@ export const TIPOS_DE_EVENTO_DA_CADENCIA = [
   "tarefa_criada",
   "parada",
   "concluida",
+  "limite_diario_atingido",
 ] as const;
 export type TipoDeEventoDaCadencia = (typeof TIPOS_DE_EVENTO_DA_CADENCIA)[number];

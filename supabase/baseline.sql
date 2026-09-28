@@ -38786,6 +38786,25 @@ revoke execute on function public.fn_expurgar_observacoes_do_jev(int,int) from a
 revoke execute on function public.fn_expurgar_observacoes_do_jev(int,int) from authenticated;
 grant  execute on function public.fn_expurgar_observacoes_do_jev(int,int) to service_role;
 
+-- ---- incremento atômico de abertura de cadência (migration 0429) ----
+create or replace function public.fn_cadencia_registrar_abertura(
+  p_enrollment_id uuid,
+  p_organization_id uuid
+) returns void
+language sql
+as $$
+  update public.email_cadence_enrollments
+  set
+    aberturas = aberturas + 1,
+    primeira_abertura_em = coalesce(primeira_abertura_em, now()),
+    ultima_abertura_em = now()
+  where id = p_enrollment_id
+    and organization_id = p_organization_id;
+$$;
+
+revoke execute on function public.fn_cadencia_registrar_abertura(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.fn_cadencia_registrar_abertura(uuid, uuid) to service_role;
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ DE PROPÓSITO, NENHUMA FUNÇÃO É CRIADA DEPOIS DESTE BLOCO. Apêndice que cria
@@ -40034,3 +40053,21 @@ grant select on public.email_cadence_events to authenticated;
 grant all on public.email_cadences to service_role;
 grant all on public.email_cadence_enrollments to service_role;
 grant all on public.email_cadence_events to service_role;
+
+-- ---- cadência: trava diária de e-mails, vocabulário de evento (migration 0431) ----
+-- Só amplia o CHECK de email_cadence_events.tipo — nenhuma função criada, não
+-- precisa vir antes da VARREDURA anon. Nenhum dado existente muda de tipo.
+-- ENTRA DEPOIS do bloco da 0428 acima (que cria a tabela com o CHECK
+-- original): o baseline é aplicado inteiro e em ordem, e quem vale é a
+-- ÚLTIMA definição do arquivo — antes desta posição, o vocabulário do
+-- baseline ficava mais curto que o da cadeia de migrations.
+alter table public.email_cadence_events
+  drop constraint if exists email_cadence_events_tipo_check;
+
+alter table public.email_cadence_events
+  add constraint email_cadence_events_tipo_check check (tipo in (
+    'inscrito','reinscrito','email_enviado','email_falhou','aberto','clicado',
+    'descadastrou','ramo_sim','ramo_nao','tarefa_criada','parada','concluida',
+    'limite_diario_atingido'
+  ));
+

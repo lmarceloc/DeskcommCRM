@@ -911,6 +911,10 @@ export const AUDIT_ACTIONS = [
   "cadencia.deleted",
   "cadencia.lead_inscrito",
   "cadencia.lead_removido",
+  // Rodada do cron que MEXEU em alguma inscrição (enviou e-mail, concluiu,
+  // parou, avançou passo). Rodada vazia não audita — mesmo critério do
+  // `campaign_worker`/`recover-stuck-messages` acima.
+  "cron.cadencia_worker",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
