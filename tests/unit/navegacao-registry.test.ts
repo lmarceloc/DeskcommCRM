@@ -177,6 +177,8 @@ describe("hubSections", () => {
       "/app/campaigns",
       // Cadência de e-mail: prospecção, como a campanha — lado do dia a dia.
       "/app/cadencias",
+      // Quem abriu o mesmo e-mail de uma cadência 3x+ — trabalhado no dia a dia.
+      "/app/hot-leads",
       "/app/contacts",
       // Empresa do negócio B2B: consultada de vez em quando, como Cadências.
       "/app/companies",

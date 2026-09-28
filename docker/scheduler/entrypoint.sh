@@ -71,6 +71,10 @@ CRONS="
 # número: é o cron que dá a cadência base, e o ritmo da campanha e do canal
 # (channel_knobs + pacing_ledger) só sabem torná-la mais lenta.
 * * * * *|45|api/v1/cron/campaign-worker
+# CADÊNCIA DE E-MAIL. Minuto a minuto, um passo por inscrição vencida por
+# rodada — envia e-mail, avança espera/ramo/tarefa, ou para. Ver
+# lib/cadencias/worker.ts para o que cada tipo de passo faz hoje.
+* * * * *|45|api/v1/cron/cadencia-worker
 */5 * * * *|60|api/v1/cron/webhook-log-retention
 */5 * * * *|45|api/v1/cron/channel-health
 */10 * * * *|60|api/v1/cron/contact-avatars

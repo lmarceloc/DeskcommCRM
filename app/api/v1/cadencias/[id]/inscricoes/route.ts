@@ -105,6 +105,29 @@ export async function POST(
     });
   }
 
+  // O contato pediu para sair de QUALQUER cadência desta organização
+  // (`.../cadencia-descadastro`, que suprime por contato, não só pela
+  // cadência clicada) — reinscrever aqui reabriria o que o LGPD exige ficar
+  // fechado. Só um humano decide contornar isso, e não é esta rota: é preciso
+  // apagar a linha de supressão a mão (fora de escopo hoje), nunca uma
+  // reinscrição comum.
+  const { data: descadastrado } = await supabase
+    .from("email_cadence_enrollments")
+    .select("id")
+    .eq("organization_id", org.orgId)
+    .eq("contact_id", contato.id)
+    .eq("motivo_parada", "descadastro")
+    .limit(1)
+    .maybeSingle();
+  if (descadastrado) {
+    return fail(
+      "cadencia_lead_indisponivel",
+      t("Este contato já pediu para não receber e-mails desta organização."),
+      409,
+      { requestId },
+    );
+  }
+
   const { data, error } = await supabase
     .from("email_cadence_enrollments")
     .insert({

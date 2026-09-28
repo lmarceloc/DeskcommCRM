@@ -156,4 +156,6 @@ export {
   StopCircle,
   CheckSquare,
   ArrowLeft,
+  // leads quentes (/app/hot-leads) — quem abriu o mesmo e-mail 3x ou mais
+  Fire,
 } from "@phosphor-icons/react/dist/ssr";
