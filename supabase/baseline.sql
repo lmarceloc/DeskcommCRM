@@ -38786,6 +38786,25 @@ revoke execute on function public.fn_expurgar_observacoes_do_jev(int,int) from a
 revoke execute on function public.fn_expurgar_observacoes_do_jev(int,int) from authenticated;
 grant  execute on function public.fn_expurgar_observacoes_do_jev(int,int) to service_role;
 
+-- ---- incremento atômico de abertura de cadência (migration 0429) ----
+create or replace function public.fn_cadencia_registrar_abertura(
+  p_enrollment_id uuid,
+  p_organization_id uuid
+) returns void
+language sql
+as $$
+  update public.email_cadence_enrollments
+  set
+    aberturas = aberturas + 1,
+    primeira_abertura_em = coalesce(primeira_abertura_em, now()),
+    ultima_abertura_em = now()
+  where id = p_enrollment_id
+    and organization_id = p_organization_id;
+$$;
+
+revoke execute on function public.fn_cadencia_registrar_abertura(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.fn_cadencia_registrar_abertura(uuid, uuid) to service_role;
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ DE PROPÓSITO, NENHUMA FUNÇÃO É CRIADA DEPOIS DESTE BLOCO. Apêndice que cria
@@ -40034,3 +40053,4 @@ grant select on public.email_cadence_events to authenticated;
 grant all on public.email_cadences to service_role;
 grant all on public.email_cadence_enrollments to service_role;
 grant all on public.email_cadence_events to service_role;
+

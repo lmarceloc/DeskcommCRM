@@ -12592,6 +12592,21 @@ export const DICIONARIO: Traducoes = {
   "A cadência já fica salva no CRM. O envio de e-mail ainda não está ligado — os leads inscritos esperam na fila.": { es: "La cadencia ya queda guardada en el CRM. El envío de correo todavía no está activado — los leads inscritos esperan en la cola." },
   "Não foi possível criar a cadência.": { es: "No se pudo crear la cadencia." },
   "Não foi possível excluir a cadência.": { es: "No se pudo eliminar la cadencia." },
+  "Este contato já pediu para não receber e-mails desta organização.": { es: "Este contacto ya pidió no recibir correos de esta organización." },
+  // ─── Leads quentes (/app/hot-leads) ───
+  "Leads quentes": { es: "Leads calientes" },
+  "Quem abriu o mesmo e-mail de uma cadência 3 vezes ou mais — sinal de interesse pra trabalhar agora.": {
+    es: "Quién abrió el mismo correo de una cadencia 3 veces o más — señal de interés para trabajar ahora.",
+  },
+  "Não consegui carregar os leads quentes.": { es: "No pude cargar los leads calientes." },
+  "Nenhum lead quente ainda": { es: "Ningún lead caliente todavía" },
+  "Assim que um lead inscrito numa cadência ativa abrir o mesmo e-mail 3 vezes, ele aparece aqui.": {
+    es: "En cuanto un lead inscrito en una cadencia activa abra el mismo correo 3 veces, aparece aquí.",
+  },
+  "Negócio sem título": { es: "Negocio sin título" },
+  "Cadência": { es: "Cadencia" },
+  "Última abertura": { es: "Última apertura" },
+  "aberturas": { es: "aperturas" },
   "Voltar às cadências": { es: "Volver a las cadencias" },
   "dia útil": { es: "día hábil" },
   "dias úteis": { es: "días hábiles" },
