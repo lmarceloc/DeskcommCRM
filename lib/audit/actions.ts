@@ -911,6 +911,14 @@ export const AUDIT_ACTIONS = [
   "cadencia.deleted",
   "cadencia.lead_inscrito",
   "cadencia.lead_removido",
+
+  // Empresa e contatos múltiplos do negócio B2B (migration 0430).
+  "company.created",
+  "company.updated",
+  "lead.contact_linked",
+  "lead.contact_unlinked",
+  // Anotação manual no negócio — timeline conta como mutação (POST).
+  "lead.note_added",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

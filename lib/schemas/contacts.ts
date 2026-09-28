@@ -57,6 +57,8 @@ export const contactCreateSchema = z.object({
   source_metadata: z.record(z.string(), z.unknown()).optional(),
   consent: z.record(z.string(), z.unknown()).optional(),
   custom_fields: customFieldsSchema.optional(),
+  linkedin_url: z.string().url().max(300).optional(),
+  job_title: z.string().max(120).optional(),
 });
 export type ContactCreate = z.infer<typeof contactCreateSchema>;
 

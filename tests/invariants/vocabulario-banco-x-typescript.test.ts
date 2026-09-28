@@ -90,6 +90,13 @@ const PARES: Array<{
     simbolo: "OwnerKind",
   },
   {
+    tabela: "crm_leads",
+    coluna: "thermometer",
+    // lib/types/leads.ts → Thermometer (migration 0430).
+    arquivo: "lib/types/leads.ts",
+    simbolo: "Thermometer",
+  },
+  {
     tabela: "crm_lead_scores",
     coluna: "ai_probability_band",
     // lib/kanban/score-band.ts → ScoreBand. Nasce com o par no mesmo commit da

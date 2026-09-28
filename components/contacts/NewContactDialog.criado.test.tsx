@@ -43,6 +43,8 @@ const CONTATO = {
   phone_number: "+5511999998888",
   cpf_hash: null,
   birthdate: null,
+  linkedin_url: null,
+  job_title: null,
   is_blocked: false,
   blocked_reason: null,
   is_anonymized: false,

@@ -165,7 +165,7 @@ describe("sidebarGroups", () => {
 });
 
 describe("hubSections", () => {
-  it("o hub do CRM é inventário: as seis telas do grupo, nas duas seções", () => {
+  it("o hub do CRM é inventário: as sete telas do grupo, nas duas seções", () => {
     // As seções são a régua do sidebar escrita por extenso — o que se abre todo
     // dia contra o que se define uma vez. Lista EXATA: `toContain` deixaria uma
     // tela nova entrar sem que ninguém decidisse de que lado dela ela cai.
@@ -178,6 +178,8 @@ describe("hubSections", () => {
       // Cadência de e-mail: prospecção, como a campanha — lado do dia a dia.
       "/app/cadencias",
       "/app/contacts",
+      // Empresa do negócio B2B: consultada de vez em quando, como Cadências.
+      "/app/companies",
       "/app/tasks",
       "/app/calls",
       "/app/comandas",

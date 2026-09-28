@@ -170,6 +170,50 @@ async function contatoDaOrgOrThrow(supabase: SB, ctx: HandlerCtx, contactId: str
   }
 }
 
+/** Mesma checagem de `contatoDaOrgOrThrow`, para `crm_companies` (migration 0430). */
+async function empresaDaOrgOrThrow(supabase: SB, ctx: HandlerCtx, companyId: string): Promise<void> {
+  const { data: empresa, error } = await supabase
+    .from("crm_companies")
+    .select("id")
+    .eq("id", companyId)
+    .eq("organization_id", ctx.organization_id)
+    .maybeSingle();
+  if (error) {
+    throw new ApiError(500, "internal_error", undefined, ctx.requestId, error.message);
+  }
+  if (!empresa) {
+    throw new ApiError(
+      404,
+      "not_found",
+      undefined,
+      ctx.requestId,
+      traduzir("Empresa não encontrada.", ctx.idioma ?? "pt-BR"),
+    );
+  }
+}
+
+/** Mesma checagem, para `catalog_products` (migration 0430). */
+async function produtoDaOrgOrThrow(supabase: SB, ctx: HandlerCtx, productId: string): Promise<void> {
+  const { data: produto, error } = await supabase
+    .from("catalog_products")
+    .select("id")
+    .eq("id", productId)
+    .eq("organization_id", ctx.organization_id)
+    .maybeSingle();
+  if (error) {
+    throw new ApiError(500, "internal_error", undefined, ctx.requestId, error.message);
+  }
+  if (!produto) {
+    throw new ApiError(
+      404,
+      "not_found",
+      undefined,
+      ctx.requestId,
+      traduzir("Produto não encontrado.", ctx.idioma ?? "pt-BR"),
+    );
+  }
+}
+
 /**
  * O gatilho `trg_lead_so_liga_a_propria_empresa` (migration 0403) recusa com
  * SQLSTATE `PT404`/`PT422` o contato ou responsável de fora da organização. As
@@ -524,6 +568,9 @@ export async function createLeadHandler(
       external_id: input.external_id ?? null,
       custom_fields: input.custom_fields ?? {},
       retomado_de_lead_id: input.retomado_de_lead_id ?? null,
+      company_id: input.company_id ?? null,
+      thermometer: input.thermometer ?? null,
+      product_id: input.product_id ?? null,
       status: "open",
       position_in_stage: nextPos,
       created_by_user_id: ctx.actor.type === "user" ? ctx.actor.id : null,
@@ -652,6 +699,12 @@ export async function updateLeadHandler(
   if (input.contact_id && input.contact_id !== existing.contact_id) {
     await contatoDaOrgOrThrow(supabase, ctx, input.contact_id);
   }
+  if (input.company_id && input.company_id !== existing.company_id) {
+    await empresaDaOrgOrThrow(supabase, ctx, input.company_id);
+  }
+  if (input.product_id && input.product_id !== existing.product_id) {
+    await produtoDaOrgOrThrow(supabase, ctx, input.product_id);
+  }
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (input.title !== undefined) patch.title = input.title;
@@ -684,6 +737,9 @@ export async function updateLeadHandler(
         : {};
     patch.custom_fields = { ...prev, ...input.custom_fields };
   }
+  if (input.company_id !== undefined) patch.company_id = input.company_id;
+  if (input.thermometer !== undefined) patch.thermometer = input.thermometer;
+  if (input.product_id !== undefined) patch.product_id = input.product_id;
 
   // O filtro entra AQUI TAMBÉM, e não só no SELECT acima: entre ler e escrever
   // há uma janela, e defesa que depende de uma leitura anterior é defesa que

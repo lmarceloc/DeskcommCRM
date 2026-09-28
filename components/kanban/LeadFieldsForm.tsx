@@ -8,13 +8,24 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useEditLead } from "@/hooks/kanban/useUpdateLead";
-import type { Lead } from "@/lib/types/leads";
+import { useCompanies, useCreateCompany } from "@/hooks/companies/useCompanies";
+import { useProducts } from "@/hooks/catalogo/useProducts";
+import type { Lead, Thermometer } from "@/lib/types/leads";
 import { updateLeadSchema, type UpdateLeadInput } from "@/lib/schemas/leads";
 import { parseReaisToCents } from "@/lib/money";
 import { CustomFieldsEditor, type CustomFieldDef } from "@/components/contacts/CustomFieldsEditor";
 import { EcoDoValor } from "./EcoDoValor";
+
+const TERMOMETROS: { valor: NonNullable<Thermometer>; rotulo: string }[] = [
+  { valor: "sem_interesse", rotulo: "Sem interesse" },
+  { valor: "frio", rotulo: "Frio" },
+  { valor: "morno", rotulo: "Morno" },
+  { valor: "quente", rotulo: "Quente" },
+  { valor: "quase_fechando", rotulo: "Quase fechando" },
+];
 
 interface FormShape {
   title: string;
@@ -22,6 +33,9 @@ interface FormShape {
   valueReais: string;
   tagsRaw: string;
   expected_close_date: string;
+  company_id: string;
+  thermometer: string;
+  product_id: string;
 }
 
 interface Props {
@@ -53,6 +67,12 @@ export function LeadFieldsForm({ lead, pipelineId, fieldDefs = [], onSaved, onCa
   const edit = useEditLead(pipelineId);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>(lead.custom_fields ?? {});
 
+  const { data: empresas } = useCompanies();
+  const { data: produtos } = useProducts();
+  const criarEmpresa = useCreateCompany();
+  const [novaEmpresaAberta, setNovaEmpresaAberta] = useState(false);
+  const [nomeDaNovaEmpresa, setNomeDaNovaEmpresa] = useState("");
+
   const form = useForm<FormShape>({
     defaultValues: {
       title: lead.title,
@@ -60,6 +80,9 @@ export function LeadFieldsForm({ lead, pipelineId, fieldDefs = [], onSaved, onCa
       valueReais: centsToReais(lead.value_cents),
       tagsRaw: (lead.tags ?? []).join(", "),
       expected_close_date: lead.expected_close_date ?? "",
+      company_id: lead.company_id ?? "",
+      thermometer: lead.thermometer ?? "",
+      product_id: lead.product_id ?? "",
     },
   });
 
@@ -70,6 +93,9 @@ export function LeadFieldsForm({ lead, pipelineId, fieldDefs = [], onSaved, onCa
       valueReais: centsToReais(lead.value_cents),
       tagsRaw: (lead.tags ?? []).join(", "),
       expected_close_date: lead.expected_close_date ?? "",
+      company_id: lead.company_id ?? "",
+      thermometer: lead.thermometer ?? "",
+      product_id: lead.product_id ?? "",
     });
     setCustomFields(lead.custom_fields ?? {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,6 +123,9 @@ export function LeadFieldsForm({ lead, pipelineId, fieldDefs = [], onSaved, onCa
       value_cents: valueCents,
       tags,
       expected_close_date: values.expected_close_date || null,
+      company_id: values.company_id || null,
+      thermometer: values.thermometer || null,
+      product_id: values.product_id || null,
       ...(fieldDefs.length > 0 ? { custom_fields: customFields } : {}),
     };
 
@@ -164,6 +193,104 @@ export function LeadFieldsForm({ lead, pipelineId, fieldDefs = [], onSaved, onCa
         <div className="space-y-2">
           <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
           <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+          <div className="space-y-2">
+            <Label>{t("Empresa")}</Label>
+            {novaEmpresaAberta ? (
+              <div className="flex gap-1.5">
+                <Input
+                  autoFocus
+                  placeholder={t("Nome da empresa")}
+                  value={nomeDaNovaEmpresa}
+                  onChange={(e) => setNomeDaNovaEmpresa(e.target.value)}
+                  onKeyDown={(e) => e.key === "Escape" && setNovaEmpresaAberta(false)}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!nomeDaNovaEmpresa.trim() || criarEmpresa.isPending}
+                  onClick={async () => {
+                    try {
+                      const { data } = await criarEmpresa.mutateAsync({ name: nomeDaNovaEmpresa.trim() });
+                      form.setValue("company_id", data.id);
+                      setNovaEmpresaAberta(false);
+                      setNomeDaNovaEmpresa("");
+                    } catch {
+                      toast.error(t("Não foi possível criar a empresa."));
+                    }
+                  }}
+                >
+                  {t("Criar")}
+                </Button>
+              </div>
+            ) : (
+              <Select
+                value={form.watch("company_id") || "none"}
+                onValueChange={(v) => {
+                  if (v === "__nova__") {
+                    setNovaEmpresaAberta(true);
+                    return;
+                  }
+                  form.setValue("company_id", v === "none" ? "" : v);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("Selecione a empresa")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("Nenhuma")}</SelectItem>
+                  {(empresas ?? []).map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__nova__">{t("+ Nova empresa…")}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("Termômetro")}</Label>
+            <Select
+              value={form.watch("thermometer") || "none"}
+              onValueChange={(v) => form.setValue("thermometer", v === "none" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("Sem calibração")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("Sem calibração")}</SelectItem>
+                {TERMOMETROS.map((op) => (
+                  <SelectItem key={op.valor} value={op.valor}>
+                    {t(op.rotulo)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t("Produto")}</Label>
+          <Select
+            value={form.watch("product_id") || "none"}
+            onValueChange={(v) => form.setValue("product_id", v === "none" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={t("Selecione o produto")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t("Nenhum")}</SelectItem>
+              {(produtos ?? []).map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {fieldDefs.length > 0 && (
