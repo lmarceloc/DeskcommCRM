@@ -8701,6 +8701,7 @@ export const DICIONARIO: Traducoes = {
   "Erro ao subir a imagem.": { es: "Error al subir la imagen." },
   // ─── Anexos do negócio (Deal) ───
   "Anexos": { es: "Adjuntos" },
+  "As empresas dos seus negócios B2B.": { es: "Las empresas de tus negocios B2B." },
   "Anexar arquivo": { es: "Adjuntar archivo" },
   "Anexo não encontrado.": { es: "Adjunto no encontrado." },
   "Apagar anexo": { es: "Eliminar adjunto" },
