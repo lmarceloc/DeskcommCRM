@@ -946,6 +946,11 @@ const HOSTS_DECLARADOS: Record<string, EntradaDeHost> = {
     motivo:
       "o encurtador de link do próprio WhatsApp, num exemplo de link GERADO pela tela de Conversões (issue #924): é o formato que quem opera vai colar no botão da landing page. Não é destino de chamada — o produto nunca fala com `wa.me`; quem abre o link é o visitante do site, no navegador dele. E não é marca nossa que um revendedor troque: o endereço é da Meta, e trocá-lo faria o link não abrir conversa nenhuma. Fica AMOSTRA porque chega à TELA, que é a razão de a régua exigir declaração em vez de silêncio.",
   },
+  "linkedin.com": {
+    categoria: "AMOSTRA",
+    motivo:
+      "placeholder do campo de LinkedIn da empresa/contato (migration 0430): mostra o FORMATO da URL que quem preenche vai colar (linkedin.com/company/... ou linkedin.com/in/...). Não é destino que o produto busca — LinkedIn não é fornecedor nem plataforma que o código chama.",
+  },
   "meusistema.com": {
     categoria: "AMOSTRA",
     motivo:
@@ -1130,6 +1135,10 @@ describe("catraca de host de terceiro no código que embarca", () => {
       // CONSOLE — o link "Onde pegar a chave" da tela de Credenciais.
       "console.typesafe.ai",
       "deskcomm.app",
+      // Placeholder do campo de LinkedIn da empresa/contato (migration 0430):
+      // formato do que digitar, não destino que o produto busca. Crescimento
+      // escrito, como a regra pede.
+      "linkedin.com",
       // Link que abre o pino que o CLIENTE mandou (`lib/messaging/localizacao.ts`).
       // Mesma natureza do `wa.me` abaixo: o produto não fala com o host, quem
       // abre é o celular do atendente. Crescimento escrito, como a regra pede.

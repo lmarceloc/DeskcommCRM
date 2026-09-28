@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/hooks/i18n/useT";
 import { linkDoAnexo, useApagarAnexo, useLeadAnexos, useSubirAnexo } from "@/hooks/leads/useLeadAnexos";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Copy, FileText, Paperclip, Trash } from "@/lib/ui/icons";
 
 interface Props {
@@ -41,10 +42,10 @@ export function AnexosDoNegocio({ leadId }: Props) {
   }
 
   async function copiarLink(anexoId: string) {
-    try {
-      await navigator.clipboard.writeText(linkDoAnexo(anexoId));
+    const ok = await copyToClipboard(linkDoAnexo(anexoId));
+    if (ok) {
       toast.success(t("Link copiado."));
-    } catch {
+    } else {
       toast.error(t("Não foi possível copiar o link."));
     }
   }
