@@ -12598,6 +12598,9 @@ export const DICIONARIO: Traducoes = {
   "Quem abriu o mesmo e-mail de uma cadência 3 vezes ou mais — sinal de interesse pra trabalhar agora.": {
     es: "Quién abrió el mismo correo de una cadencia 3 veces o más — señal de interés para trabajar ahora.",
   },
+  "Quem abriu o mesmo e-mail de uma cadência 3 vezes ou mais.": {
+    es: "Quién abrió el mismo correo de una cadencia 3 veces o más.",
+  },
   "Não consegui carregar os leads quentes.": { es: "No pude cargar los leads calientes." },
   "Nenhum lead quente ainda": { es: "Ningún lead caliente todavía" },
   "Assim que um lead inscrito numa cadência ativa abrir o mesmo e-mail 3 vezes, ele aparece aqui.": {

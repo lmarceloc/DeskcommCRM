@@ -40054,3 +40054,20 @@ grant all on public.email_cadences to service_role;
 grant all on public.email_cadence_enrollments to service_role;
 grant all on public.email_cadence_events to service_role;
 
+-- ---- cadência: trava diária de e-mails, vocabulário de evento (migration 0431) ----
+-- Só amplia o CHECK de email_cadence_events.tipo — nenhuma função criada, não
+-- precisa vir antes da VARREDURA anon. Nenhum dado existente muda de tipo.
+-- ENTRA DEPOIS do bloco da 0428 acima (que cria a tabela com o CHECK
+-- original): o baseline é aplicado inteiro e em ordem, e quem vale é a
+-- ÚLTIMA definição do arquivo — antes desta posição, o vocabulário do
+-- baseline ficava mais curto que o da cadeia de migrations.
+alter table public.email_cadence_events
+  drop constraint if exists email_cadence_events_tipo_check;
+
+alter table public.email_cadence_events
+  add constraint email_cadence_events_tipo_check check (tipo in (
+    'inscrito','reinscrito','email_enviado','email_falhou','aberto','clicado',
+    'descadastrou','ramo_sim','ramo_nao','tarefa_criada','parada','concluida',
+    'limite_diario_atingido'
+  ));
+

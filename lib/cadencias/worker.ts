@@ -23,12 +23,25 @@
  * `configuracao.paradas.ganhoOuPerdido` é a única parada automática hoje
  * (lê `crm_leads.status`). `respondeu`/`bounce` exigem infra que não existe
  * (webhook de resposta / de bounce do provedor) — mesmo motivo do ramo acima.
+ *
+ * ═══ Teto diário de envio (migration 0431) ═══
+ * O transporte de e-mail é ÚNICO por instalação (`lib/email/roteador.ts`) —
+ * a MESMA caixa/conta leva o volume de TODAS as organizações do clone, e
+ * provedor de e-mail trava/bane quem manda volume alto de uma vez. Antes de
+ * CADA envio o worker checa `CADENCIA_LIMITE_EMAILS_POR_DIA` (padrão 60,
+ * `lib/env.ts`) por `checkRateLimit` (Upstash Redis, janela fixa de 24h —
+ * o mesmo mecanismo do resto do produto, nenhuma tabela nova). Passado o
+ * teto, a inscrição NÃO falha nem soma `tentativas` (não é erro do lead nem
+ * da cadência) — só é adiada, reconferida em 1h, com um evento
+ * `limite_diario_atingido` na timeline pra quem opera ver O PORQUÊ do atraso
+ * em vez de achar que o envio travou sem motivo.
  */
 import { avancarDiasUteis } from "./dias-uteis";
 import { passoParaExecutar, primeiroDoLado, proximoIrmao } from "./proximo-passo";
 import { renderizarComLead } from "./renderizar";
 import { signCadenciaLink } from "./token";
 import type { Cadencia, Passo } from "./tipos";
+import { checkRateLimit } from "@/lib/ai/dispatcher/rate-limit";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { sendEmail } from "@/lib/email/roteador";
 import { env } from "@/lib/env";
@@ -40,6 +53,16 @@ type Admin = ReturnType<typeof createAdminClient>;
 const LOTE = 50;
 /** Trava otimista: quem reivindica a linha é dono por isso — cobre a duração de um tick lento. */
 const JANELA_DE_TRAVA_MS = 3 * 60 * 1000;
+
+/**
+ * Bucket ÚNICO (sem sufixo de organização) — de propósito: é a MESMA caixa de
+ * e-mail que leva o volume de toda a instalação, então o teto tem que ser
+ * medido no agregado, não por organização.
+ */
+const BUCKET_TETO_DIARIO_DE_EMAIL = "cadencia-email-diario";
+const JANELA_DO_TETO_DIARIO_SEG = 24 * 60 * 60;
+/** Quantos minutos até reconferir depois que o teto bateu — não martela a cada minuto, nem faz o lead esperar até amanhã sem checar de novo. */
+const MINUTOS_DE_ESPERA_POR_TETO = 60;
 
 export interface InscricaoRow {
   id: string;
@@ -228,6 +251,25 @@ async function processarInscricao(admin: Admin, inscricao: InscricaoRow, agora: 
   }
 
   if (passo.tipo === "email") {
+    const teto = await checkRateLimit(
+      BUCKET_TETO_DIARIO_DE_EMAIL,
+      env.CADENCIA_LIMITE_EMAILS_POR_DIA,
+      JANELA_DO_TETO_DIARIO_SEG,
+    );
+    if (!teto.allowed) {
+      await admin.from("email_cadence_events").insert({
+        organization_id: inscricao.organization_id,
+        cadence_id: inscricao.cadence_id,
+        enrollment_id: inscricao.id,
+        lead_id: inscricao.lead_id,
+        tipo: "limite_diario_atingido",
+        passo_id: passo.id,
+        metadata: { limite: env.CADENCIA_LIMITE_EMAILS_POR_DIA, contagem: teto.count },
+      });
+      await liberarSemAvancar(admin, inscricao, agora, MINUTOS_DE_ESPERA_POR_TETO);
+      return { desfecho: "adiada" as const };
+    }
+
     const { data: contatoRow } = await admin
       .from("contacts")
       .select("email, name, display_name, is_anonymized")
