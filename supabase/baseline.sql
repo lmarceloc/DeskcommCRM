@@ -38786,6 +38786,25 @@ revoke execute on function public.fn_expurgar_observacoes_do_jev(int,int) from a
 revoke execute on function public.fn_expurgar_observacoes_do_jev(int,int) from authenticated;
 grant  execute on function public.fn_expurgar_observacoes_do_jev(int,int) to service_role;
 
+-- ---- incremento atômico de abertura de cadência (migration 0429) ----
+create or replace function public.fn_cadencia_registrar_abertura(
+  p_enrollment_id uuid,
+  p_organization_id uuid
+) returns void
+language sql
+as $$
+  update public.email_cadence_enrollments
+  set
+    aberturas = aberturas + 1,
+    primeira_abertura_em = coalesce(primeira_abertura_em, now()),
+    ultima_abertura_em = now()
+  where id = p_enrollment_id
+    and organization_id = p_organization_id;
+$$;
+
+revoke execute on function public.fn_cadencia_registrar_abertura(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.fn_cadencia_registrar_abertura(uuid, uuid) to service_role;
+
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
 -- ⚠️ DE PROPÓSITO, NENHUMA FUNÇÃO É CRIADA DEPOIS DESTE BLOCO. Apêndice que cria
@@ -40035,11 +40054,117 @@ grant all on public.email_cadences to service_role;
 grant all on public.email_cadence_enrollments to service_role;
 grant all on public.email_cadence_events to service_role;
 
--- ---- anexos do negócio (migration 0429) ----
+-- ---- empresas, contatos múltiplos por negócio, termômetro e produto (migration 0430) ----
+create table if not exists public.crm_companies (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  name text not null,
+  website text,
+  linkedin_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by_user_id uuid references auth.users(id) on delete set null,
+  constraint crm_companies_name_check check (btrim(name) <> '')
+);
+
+create index if not exists idx_crm_companies_org_name
+  on public.crm_companies (organization_id, name);
+
+comment on table public.crm_companies is
+  'Empresa vinculada a negócios e contatos B2B (migration 0430). Não confundir com organizations (o tenant do produto).';
+
+alter table public.crm_companies enable row level security;
+
+drop policy if exists tenant_isolation_crm_companies_all on public.crm_companies;
+create policy tenant_isolation_crm_companies_all on public.crm_companies
+  for all using (
+    (organization_id in (select public.fn_user_org_ids())) or public.fn_is_platform_admin()
+  )
+  with check (
+    (organization_id in (select public.fn_user_org_ids())) or public.fn_is_platform_admin()
+  );
+
+alter table public.crm_leads
+  add column if not exists company_id uuid references public.crm_companies(id) on delete set null;
+
+alter table public.crm_leads
+  add column if not exists thermometer text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'crm_leads_thermometer_check'
+      and conrelid = 'public.crm_leads'::regclass
+  ) then
+    alter table public.crm_leads
+      add constraint crm_leads_thermometer_check
+      check (thermometer is null or thermometer in ('sem_interesse', 'frio', 'morno', 'quente', 'quase_fechando'));
+  end if;
+end $$;
+
+alter table public.crm_leads
+  add column if not exists product_id uuid references public.catalog_products(id) on delete set null;
+
+create index if not exists idx_crm_leads_company on public.crm_leads (company_id) where company_id is not null;
+
+create table if not exists public.crm_lead_contacts (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  lead_id uuid not null references public.crm_leads(id) on delete cascade,
+  contact_id uuid not null references public.contacts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  created_by_user_id uuid references auth.users(id) on delete set null,
+  constraint crm_lead_contacts_unica unique (lead_id, contact_id)
+);
+
+create index if not exists idx_crm_lead_contacts_lead on public.crm_lead_contacts (lead_id);
+create index if not exists idx_crm_lead_contacts_contact on public.crm_lead_contacts (contact_id);
+
+comment on table public.crm_lead_contacts is
+  'Outros stakeholders do negócio B2B, além do contato principal (crm_leads.contact_id). Migration 0430.';
+
+alter table public.crm_lead_contacts enable row level security;
+
+drop policy if exists tenant_isolation_crm_lead_contacts_all on public.crm_lead_contacts;
+create policy tenant_isolation_crm_lead_contacts_all on public.crm_lead_contacts
+  for all using (
+    (organization_id in (select public.fn_user_org_ids())) or public.fn_is_platform_admin()
+  )
+  with check (
+    (organization_id in (select public.fn_user_org_ids())) or public.fn_is_platform_admin()
+  );
+
+alter table public.contacts
+  add column if not exists linkedin_url text;
+
+alter table public.contacts
+  add column if not exists job_title text;
+
+-- ---- cadência: trava diária de e-mails, vocabulário de evento (migration 0431) ----
+-- Só amplia o CHECK de email_cadence_events.tipo — nenhuma função criada, não
+-- precisa vir antes da VARREDURA anon. Nenhum dado existente muda de tipo.
+-- ENTRA DEPOIS do bloco da 0428 acima (que cria a tabela com o CHECK
+-- original): o baseline é aplicado inteiro e em ordem, e quem vale é a
+-- ÚLTIMA definição do arquivo — antes desta posição, o vocabulário do
+-- baseline ficava mais curto que o da cadeia de migrations.
+alter table public.email_cadence_events
+  drop constraint if exists email_cadence_events_tipo_check;
+
+alter table public.email_cadence_events
+  add constraint email_cadence_events_tipo_check check (tipo in (
+    'inscrito','reinscrito','email_enviado','email_falhou','aberto','clicado',
+    'descadastrou','ramo_sim','ramo_nao','tarefa_criada','parada','concluida',
+    'limite_diario_atingido'
+  ));
+
+-- ---- anexos do negócio (migration 0432) ----
 -- Arquivo anexado a um Deal (proposta, contrato, orçamento), com link público
 -- permanente em GET /api/v1/anexos/{id}. Tabela nova (metadado por arquivo:
 -- nome original, tipo, tamanho, quem subiu) e não array de caminhos como a
 -- 0390 (fotos do produto) — motivo completo no cabeçalho da migration.
+-- ⚠️ Migration renumerada de 0429 para 0432 no merge: 0429 já estava tomado
+-- por outra PR mesclada primeiro (cadencia_registrar_abertura).
 create table if not exists public.crm_lead_attachments (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,

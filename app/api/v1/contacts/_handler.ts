@@ -32,7 +32,7 @@ import { contactListQuerySchema } from "@/lib/schemas";
 type SB = SupabaseClient;
 
 const SELECT_COLS =
-  "id, organization_id, name, display_name, email, email_normalized, phone_number, cpf_hash, birthdate, is_blocked, blocked_reason, is_anonymized, anonymized_at, is_merged_into, merged_at, consent, tags, source, source_metadata, custom_fields, created_at, updated_at, last_activity_at, first_service_at";
+  "id, organization_id, name, display_name, email, email_normalized, phone_number, cpf_hash, birthdate, is_blocked, blocked_reason, is_anonymized, anonymized_at, is_merged_into, merged_at, consent, tags, source, source_metadata, custom_fields, linkedin_url, job_title, created_at, updated_at, last_activity_at, first_service_at";
 
 interface CursorPayload {
   sort: string | null;
@@ -392,6 +392,8 @@ export async function createContactHandler(
     source_metadata: input.source_metadata ?? {},
     custom_fields: input.custom_fields ?? {},
     consent: input.consent ?? {},
+    linkedin_url: input.linkedin_url ?? null,
+    job_title: input.job_title ?? null,
   };
 
   if (input.cpf) {
@@ -548,6 +550,8 @@ export async function patchContactHandler(
   // aqui tornaria IMPOSSÍVEL apagar um campo pela tela, porque a chave removida
   // voltaria do estado anterior a cada gravação.
   if (input.custom_fields !== undefined) patch.custom_fields = input.custom_fields;
+  if (input.linkedin_url !== undefined) patch.linkedin_url = input.linkedin_url;
+  if (input.job_title !== undefined) patch.job_title = input.job_title;
   if (input.consent !== undefined) {
     // MERGE por finalidade, nunca substituição.
     //

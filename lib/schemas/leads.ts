@@ -202,6 +202,9 @@ export const createLeadSchema = z.object({
     .optional(),
   tags: z.array(z.string()).default([]),
   source: z.string().min(1).default("manual"),
+  company_id: z.string().uuid().nullable().optional(),
+  thermometer: z.enum(["sem_interesse", "frio", "morno", "quente", "quase_fechando"]).nullable().optional(),
+  product_id: z.string().uuid().nullable().optional(),
 });
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 
@@ -230,6 +233,12 @@ export const updateLeadSchema = z.object({
     .optional(),
   tags: z.array(z.string()).optional(),
   custom_fields: z.record(z.string(), z.unknown()).optional(),
+  /** Empresa do negócio (migration 0430). `null` desvincula. */
+  company_id: z.string().uuid().nullable().optional(),
+  /** Temperatura de interesse — separada da etapa do funil. `null` limpa. */
+  thermometer: z.enum(["sem_interesse", "frio", "morno", "quente", "quase_fechando"]).nullable().optional(),
+  /** Produto do catálogo (`catalog_products`) vendido neste negócio. */
+  product_id: z.string().uuid().nullable().optional(),
 });
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { moveLeadSchema, loseLeadSchema, bulkLeadActionSchema } from "./leads";
+import { moveLeadSchema, loseLeadSchema, bulkLeadActionSchema, updateLeadSchema } from "./leads";
 
 const UUID = "11111111-1111-4111-8111-111111111111";
 const UUID2 = "22222222-2222-4222-8222-222222222222";
@@ -94,6 +94,28 @@ describe("bulkLeadActionSchema", () => {
       lead_ids: [UUID],
       params: {},
     });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("updateLeadSchema — empresa, termômetro e produto (migration 0430)", () => {
+  it("aceita os três campos nulos (desvincular)", () => {
+    const r = updateLeadSchema.safeParse({ company_id: null, thermometer: null, product_id: null });
+    expect(r.success).toBe(true);
+  });
+
+  it("aceita um termômetro válido", () => {
+    const r = updateLeadSchema.safeParse({ thermometer: "quente" });
+    expect(r.success).toBe(true);
+  });
+
+  it("recusa termômetro fora do vocabulário", () => {
+    const r = updateLeadSchema.safeParse({ thermometer: "fervendo" });
+    expect(r.success).toBe(false);
+  });
+
+  it("recusa company_id que não é uuid", () => {
+    const r = updateLeadSchema.safeParse({ company_id: "não-é-uuid" });
     expect(r.success).toBe(false);
   });
 });

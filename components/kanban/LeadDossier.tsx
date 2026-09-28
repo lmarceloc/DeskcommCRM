@@ -8,9 +8,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useLeadTimeline } from "@/hooks/leads/useLeadTimeline";
 import type { Lead } from "@/lib/types/leads";
 import { AnexosDoNegocio } from "./AnexosDoNegocio";
+import { AnotacoesDoNegocio } from "./AnotacoesDoNegocio";
 import { ContatoDoNegocio } from "./ContatoDoNegocio";
 import { ConversaNoDossie } from "./ConversaNoDossie";
 import { LeadFieldsForm } from "./LeadFieldsForm";
+import { OutrosContatosDoNegocio } from "./OutrosContatosDoNegocio";
 import { ScoreSlot } from "./ScoreSlot";
 import { LeadTimeline } from "./LeadTimeline";
 import { OwnerBadge } from "./OwnerBadge";
@@ -143,6 +145,14 @@ export function LeadDossier({
           <ContatoDoNegocio contactId={lead.contact_id} pipelineId={pipelineId} />
         </section>
 
+        {/* Outros stakeholders do negócio B2B, além do contato principal acima. */}
+        <section className="border-b border-border py-3">
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+            {t("Outros contatos")}
+          </h3>
+          <OutrosContatosDoNegocio leadId={lead.id} />
+        </section>
+
         {/* Proposta, contrato, orçamento — PDF/JPEG/PNG/Word. O que se manda
             pro cliente é o LINK permanente (botão "Copiar link"), nunca o
             arquivo pelo WhatsApp. */}
@@ -151,6 +161,14 @@ export function LeadDossier({
             {t("Anexos")}
           </h3>
           <AnexosDoNegocio leadId={lead.id} />
+        </section>
+
+        {/* Anotação manual, com @menção visual — antes da timeline automática. */}
+        <section className="border-b border-border py-3">
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+            {t("Anotações")}
+          </h3>
+          <AnotacoesDoNegocio leadId={lead.id} itens={timeline.itens} />
         </section>
 
         {/* ② timeline */}

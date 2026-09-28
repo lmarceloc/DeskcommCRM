@@ -227,6 +227,19 @@ export const NAV_CATALOG = [
     section: "O dia a dia da venda",
   },
   {
+    // Quem abriu o MESMO e-mail de uma cadência 3x ou mais (LIMIAR_LEAD_QUENTE,
+    // lib/cadencias/hot-leads.ts) — sinal de interesse que o vendedor trabalha
+    // hoje. `agent`+ porque é gesto do dia a dia da venda, não de quem monta a
+    // cadência.
+    href: "/app/hot-leads",
+    label: "Leads quentes",
+    description: "Quem abriu o mesmo e-mail de uma cadência 3 vezes ou mais.",
+    icon: "Fire",
+    group: "crm",
+    minRole: "agent",
+    section: "O dia a dia da venda",
+  },
+  {
     href: "/app/contacts",
     label: "Contatos",
     description: "As pessoas do outro lado da conversa e seu histórico.",
@@ -234,6 +247,18 @@ export const NAV_CATALOG = [
     group: "crm",
     section: "O dia a dia da venda",
     sidebar: true,
+  },
+  {
+    // Empresa do negócio B2B (migration 0430). Só no hub, mesmo motivo de
+    // Cadências/Campanhas: é consultada de vez em quando (o vínculo do dia a
+    // dia é feito no dossiê do negócio), e o sidebar já está no limite medido
+    // pelo e2e de navegação (900px sem scroll).
+    href: "/app/companies",
+    label: "Empresas",
+    description: "As empresas dos seus negócios B2B.",
+    icon: "Buildings",
+    group: "crm",
+    section: "O dia a dia da venda",
   },
   {
     // Extraída do PR #418 (@clinicacentrodosorrisosc-code). Fica no CRM e no

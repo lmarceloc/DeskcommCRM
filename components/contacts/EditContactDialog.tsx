@@ -29,6 +29,9 @@ interface FormShape {
   birthdate?: string;
   tagsRaw?: string;
   custom_fields?: Record<string, unknown>;
+  /** 0430: dado de contato B2B. */
+  job_title?: string;
+  linkedin_url?: string;
 }
 
 interface Props {
@@ -52,6 +55,8 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
       birthdate: contact.birthdate ?? "",
       tagsRaw: contact.tags.join(", "),
       custom_fields: contact.custom_fields ?? {},
+      job_title: contact.job_title ?? "",
+      linkedin_url: contact.linkedin_url ?? "",
     },
   });
 
@@ -66,6 +71,8 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
         birthdate: contact.birthdate ?? "",
         tagsRaw: contact.tags.join(", "),
         custom_fields: contact.custom_fields ?? {},
+        job_title: contact.job_title ?? "",
+        linkedin_url: contact.linkedin_url ?? "",
       });
     }
   }, [open, contact, form]);
@@ -85,6 +92,8 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
     // exigem), então o diálogo não normaliza nada — o que se digita é o que se
     // grava, e a ficha recarregada mostra a MESMA string.
     if (values.birthdate?.trim()) payload.birthdate = values.birthdate.trim();
+    if (values.job_title?.trim()) payload.job_title = values.job_title.trim();
+    if (values.linkedin_url?.trim()) payload.linkedin_url = values.linkedin_url.trim();
     payload.tags = tags;
     // Sempre no payload, mesmo vazio: o PATCH SUBSTITUI, e é assim que apagar um
     // campo pela tela chega ao banco.
@@ -127,6 +136,14 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
           <div className="space-y-2">
             <Label htmlFor="ec-birthdate">{t("Data de nascimento")}</Label>
             <Input id="ec-birthdate" type="date" {...form.register("birthdate")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ec-job-title">{t("Cargo")}</Label>
+            <Input id="ec-job-title" {...form.register("job_title")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ec-linkedin">LinkedIn</Label>
+            <Input id="ec-linkedin" type="url" placeholder="https://linkedin.com/in/…" {...form.register("linkedin_url")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ec-tags">{t("Tags")}</Label>

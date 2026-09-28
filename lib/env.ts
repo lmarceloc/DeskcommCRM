@@ -520,6 +520,30 @@ const schema = z.object({
    */
   VAPID_PUBLIC_KEY: z.string().optional().default(""),
   VAPID_PRIVATE_KEY: z.string().optional().default(""),
+
+  /**
+   * Teto de e-mails de CADÊNCIA por dia, contado por INSTALAÇÃO (não por
+   * organização): o transporte de e-mail é único (`lib/email/roteador.ts` —
+   * SMTP se configurado, senão Resend), então é a MESMA caixa/conta que leva
+   * o volume de todas as organizações do clone. Provedor de e-mail (Gmail,
+   * Outlook, SMTP corporativo, a própria Resend) trava ou bane quem manda
+   * volume alto de uma vez — pedido do dono do produto depois de uma caixa
+   * ter sido banida direto por isso. `0` não desliga a trava, cai no
+   * default: se um dia precisar desligar, é decisão com knob próprio, não
+   * um zero que o schema recusaria de qualquer forma.
+   */
+  CADENCIA_LIMITE_EMAILS_POR_DIA: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60)
+    .catch(({ error }) => {
+      console.warn(
+        `[env] CADENCIA_LIMITE_EMAILS_POR_DIA inválida (${JSON.stringify(process.env.CADENCIA_LIMITE_EMAILS_POR_DIA)}) — usando o padrão 60 e-mails/dia. ` +
+          `(${error.issues[0]?.message ?? "valor recusado"})`,
+      );
+      return 60;
+    }),
 });
 
 let parsed = schema.safeParse(process.env);

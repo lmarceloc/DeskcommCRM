@@ -33,9 +33,14 @@
  */
 import { randomUUID } from "node:crypto";
 import { type NextRequest } from "next/server";
+import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
+import { audit } from "@/lib/audit";
+import { requireRole } from "@/lib/auth/require-role";
 import { loadAuthUser } from "@/lib/auth/server";
+import { emitLeadActivity } from "@/lib/leads/activity-emitter";
+import { requireSupportWrite } from "@/lib/impersonate/support";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -125,4 +130,76 @@ export async function GET(req: NextRequest, ctx: RouteCtx): Promise<Response> {
       cursor: hasMore && last ? encodeCursor({ performed_at: last.performed_at, id: last.id }) : null,
     },
   });
+}
+
+const criarNotaSchema = z.object({
+  /**
+   * O texto da nota. `@Nome Sobrenome` fica em texto puro — a tela é quem
+   * destaca a menção comparando com os membros da organização (decisão do
+   * dono do produto: só visual por enquanto, sem notificar quem foi citado).
+   */
+  texto: z.string().trim().min(1).max(4000),
+});
+
+/**
+ * POST /api/v1/leads/[id]/timeline — anotação manual no negócio.
+ *
+ * `agent`+: registrar o que aconteceu na negociação é gesto de quem atende,
+ * não só de quem administra. O texto vai para `reason` — para uma NOTA
+ * (diferente de `lead_edited`), o texto É o dado que a pessoa quis guardar,
+ * não um resumo do que mudou; a restrição de "nomear campo, nunca valor" do
+ * `§9` é sobre timeline AUTOMÁTICA, não sobre o que um humano escreveu à mão.
+ */
+export async function POST(req: NextRequest, ctx: RouteCtx): Promise<Response> {
+  const negado = await requireSupportWrite();
+  if (negado) return negado;
+
+  const requestId = randomUUID();
+  const authz = await requireRole("agent", { requestId, resource: "crm_lead_activities" });
+  if (!authz.ok) return authz.response;
+  const t = (texto: string) => traduzir(texto, authz.user.idioma);
+  const { id: leadId } = await ctx.params;
+
+  const parsed = criarNotaSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return fail("validation_failed", t("Escreva o texto da anotação."), 422, {
+      requestId,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const supabase = await createClient();
+  const { data: lead, error: leadErr } = await supabase
+    .from("crm_leads")
+    .select("id, contact_id")
+    .eq("organization_id", authz.org.orgId)
+    .eq("id", leadId)
+    .maybeSingle();
+  if (leadErr) return fail("internal_error", leadErr.message, 500, { requestId });
+  if (!lead) return fail("not_found", t("Negócio não encontrado."), 404, { requestId });
+
+  const resultado = await emitLeadActivity(supabase, {
+    organizationId: authz.org.orgId,
+    leadId,
+    contactId: (lead as { contact_id: string | null }).contact_id,
+    type: "note",
+    sourceModule: "crm",
+    sourceId: null,
+    actor: { type: "user", id: authz.user.id },
+    reason: parsed.data.texto,
+  });
+  if (!resultado.ok) {
+    return fail("internal_error", resultado.error ?? t("Não foi possível salvar a anotação."), 500, { requestId });
+  }
+
+  void audit({
+    action: "lead.note_added",
+    actorUserId: authz.user.id,
+    organizationId: authz.org.orgId,
+    resourceType: "crm_lead_activities",
+    resourceId: leadId,
+    requestId,
+  });
+
+  return ok({ criado: true }, { requestId, status: 201 });
 }
